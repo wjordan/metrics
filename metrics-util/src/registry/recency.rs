@@ -92,11 +92,11 @@ impl<T> CounterFn for Generational<T>
 where
     T: CounterFn,
 {
-    fn increment(&self, value: u64) {
+    fn increment(&self, value: u64) -> u64 {
         self.with_increment(|c| c.increment(value))
     }
 
-    fn absolute(&self, value: u64) {
+    fn absolute(&self, value: u64) -> u64 {
         self.with_increment(|c| c.absolute(value))
     }
 }
@@ -105,15 +105,15 @@ impl<T> GaugeFn for Generational<T>
 where
     T: GaugeFn,
 {
-    fn increment(&self, value: f64) {
+    fn increment(&self, value: f64) -> f64 {
         self.with_increment(|g| g.increment(value))
     }
 
-    fn decrement(&self, value: f64) {
+    fn decrement(&self, value: f64) -> f64 {
         self.with_increment(|g| g.decrement(value))
     }
 
-    fn set(&self, value: f64) {
+    fn set(&self, value: f64) -> f64 {
         self.with_increment(|g| g.set(value))
     }
 }

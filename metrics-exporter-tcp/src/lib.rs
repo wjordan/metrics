@@ -182,26 +182,31 @@ impl Handle {
 }
 
 impl CounterFn for Handle {
-    fn increment(&self, value: u64) {
-        self.state.push_metric(&self.key, MetricOperation::IncrementCounter(value))
+    fn increment(&self, value: u64) -> u64 {
+        self.state.push_metric(&self.key, MetricOperation::IncrementCounter(value));
+        0
     }
 
-    fn absolute(&self, value: u64) {
-        self.state.push_metric(&self.key, MetricOperation::SetCounter(value))
+    fn absolute(&self, value: u64) -> u64 {
+        self.state.push_metric(&self.key, MetricOperation::SetCounter(value));
+        0
     }
 }
 
 impl GaugeFn for Handle {
-    fn increment(&self, value: f64) {
-        self.state.push_metric(&self.key, MetricOperation::IncrementGauge(value))
+    fn increment(&self, value: f64) -> f64 {
+        self.state.push_metric(&self.key, MetricOperation::IncrementGauge(value));
+        0.0
     }
 
-    fn decrement(&self, value: f64) {
-        self.state.push_metric(&self.key, MetricOperation::DecrementGauge(value))
+    fn decrement(&self, value: f64) -> f64 {
+        self.state.push_metric(&self.key, MetricOperation::DecrementGauge(value));
+        0.0
     }
 
-    fn set(&self, value: f64) {
-        self.state.push_metric(&self.key, MetricOperation::SetGauge(value))
+    fn set(&self, value: f64) -> f64 {
+        self.state.push_metric(&self.key, MetricOperation::SetGauge(value));
+        0.0
     }
 }
 

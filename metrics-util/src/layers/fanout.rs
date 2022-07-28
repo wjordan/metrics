@@ -16,16 +16,20 @@ impl FanoutCounter {
 }
 
 impl CounterFn for FanoutCounter {
-    fn increment(&self, value: u64) {
+    fn increment(&self, value: u64) -> u64 {
+        let mut x = 0;
         for counter in &self.counters {
-            counter.increment(value);
+            x = counter.increment(value);
         }
+        x
     }
 
-    fn absolute(&self, value: u64) {
+    fn absolute(&self, value: u64) -> u64 {
+        let mut x = 0;
         for counter in &self.counters {
-            counter.absolute(value);
+            x = counter.absolute(value);
         }
+        x
     }
 }
 
@@ -46,22 +50,28 @@ impl FanoutGauge {
 }
 
 impl GaugeFn for FanoutGauge {
-    fn increment(&self, value: f64) {
+    fn increment(&self, value: f64) -> f64 {
+        let mut x = 0.0;
         for gauge in &self.gauges {
-            gauge.increment(value);
+            x = gauge.increment(value);
         }
+        x
     }
 
-    fn decrement(&self, value: f64) {
+    fn decrement(&self, value: f64) -> f64 {
+        let mut x = 0.0;
         for gauge in &self.gauges {
-            gauge.decrement(value);
+            x = gauge.decrement(value);
         }
+        x
     }
 
-    fn set(&self, value: f64) {
+    fn set(&self, value: f64) -> f64 {
+        let mut x = 0.0;
         for gauge in &self.gauges {
-            gauge.set(value);
+            x = gauge.set(value);
         }
+        x
     }
 }
 

@@ -6,7 +6,9 @@ use crate::IntoF64;
 /// A counter handler.
 pub trait CounterFn {
     /// Increments the counter by the given amount.
-    fn increment(&self, value: u64);
+    ///
+    /// Returns the previous value.
+    fn increment(&self, value: u64) -> u64;
 
     /// Sets the counter to at least the given amount.
     ///
@@ -18,19 +20,27 @@ pub trait CounterFn {
     ///
     /// This method must cope with those cases.  An example of doing so atomically can be found in
     /// `AtomicCounter`.
-    fn absolute(&self, value: u64);
+    ///
+    /// Returns the previous value.
+    fn absolute(&self, value: u64) -> u64;
 }
 
 /// A gauge handler.
 pub trait GaugeFn {
     /// Increments the gauge by the given amount.
-    fn increment(&self, value: f64);
+    ///
+    /// Returns the previous value.
+    fn increment(&self, value: f64) -> f64;
 
     /// Decrements the gauge by the given amount.
-    fn decrement(&self, value: f64);
+    ///
+    /// Returns the previous value.
+    fn decrement(&self, value: f64) -> f64;
 
     /// Sets the gauge to the given amount.
-    fn set(&self, value: f64);
+    ///
+    /// Returns the previous value.
+    fn set(&self, value: f64) -> f64;
 }
 
 /// A histogram handler.
@@ -72,17 +82,17 @@ impl Counter {
     }
 
     /// Increments the counter.
-    pub fn increment(&self, value: u64) {
+    pub fn increment(&self, value: u64) -> u64 {
         if let Some(c) = &self.inner {
             c.increment(value)
-        }
+        } else {0}
     }
 
     /// Sets the counter to an absolute value.
-    pub fn absolute(&self, value: u64) {
+    pub fn absolute(&self, value: u64) -> u64 {
         if let Some(c) = &self.inner {
             c.absolute(value)
-        }
+        } else {0}
     }
 }
 
@@ -101,24 +111,24 @@ impl Gauge {
     }
 
     /// Increments the gauge.
-    pub fn increment<T: IntoF64>(&self, value: T) {
+    pub fn increment<T: IntoF64>(&self, value: T) -> f64 {
         if let Some(g) = &self.inner {
             g.increment(value.into_f64())
-        }
+        } else {0.0}
     }
 
     /// Decrements the gauge.
-    pub fn decrement<T: IntoF64>(&self, value: T) {
+    pub fn decrement<T: IntoF64>(&self, value: T) -> f64 {
         if let Some(g) = &self.inner {
             g.decrement(value.into_f64())
-        }
+        } else {0.0}
     }
 
     /// Sets the gauge.
-    pub fn set<T: IntoF64>(&self, value: T) {
+    pub fn set<T: IntoF64>(&self, value: T) -> f64 {
         if let Some(g) = &self.inner {
             g.set(value.into_f64())
-        }
+        } else {0.0}
     }
 }
 
@@ -145,20 +155,21 @@ impl Histogram {
 }
 
 impl CounterFn for AtomicU64 {
-    fn increment(&self, value: u64) {
-        let _ = self.fetch_add(value, Ordering::Release);
+    fn increment(&self, value: u64) -> u64 {
+        self.fetch_add(value, Ordering::Release)
     }
 
-    fn absolute(&self, value: u64) {
-        let _ = self.fetch_max(value, Ordering::AcqRel);
+    fn absolute(&self, value: u64) -> u64 {
+        self.fetch_max(value, Ordering::AcqRel)
     }
 }
 
 impl GaugeFn for AtomicU64 {
-    fn increment(&self, value: f64) {
+    fn increment(&self, value: f64) -> f64 {
+        let mut input = 0f64;
         loop {
             let result = self.fetch_update(Ordering::AcqRel, Ordering::Relaxed, |curr| {
-                let input = f64::from_bits(curr);
+                input = f64::from_bits(curr);
                 let output = input + value;
                 Some(output.to_bits())
             });
@@ -167,12 +178,14 @@ impl GaugeFn for AtomicU64 {
                 break;
             }
         }
+        input
     }
 
-    fn decrement(&self, value: f64) {
+    fn decrement(&self, value: f64) -> f64 {
+        let mut input = 0f64;
         loop {
             let result = self.fetch_update(Ordering::AcqRel, Ordering::Relaxed, |curr| {
-                let input = f64::from_bits(curr);
+                input = f64::from_bits(curr);
                 let output = input - value;
                 Some(output.to_bits())
             });
@@ -181,30 +194,32 @@ impl GaugeFn for AtomicU64 {
                 break;
             }
         }
+        input
     }
 
-    fn set(&self, value: f64) {
-        let _ = self.swap(value.to_bits(), Ordering::AcqRel);
+    fn set(&self, value: f64) -> f64 {
+        f64::from_bits(self.swap(value.to_bits(), Ordering::AcqRel))
     }
 }
 
 #[cfg(feature = "std-atomics")]
 impl CounterFn for std::sync::atomic::AtomicU64 {
-    fn increment(&self, value: u64) {
-        let _ = self.fetch_add(value, Ordering::Release);
+    fn increment(&self, value: u64) -> u64 {
+        self.fetch_add(value, Ordering::Release)
     }
 
-    fn absolute(&self, value: u64) {
-        let _ = self.fetch_max(value, Ordering::AcqRel);
+    fn absolute(&self, value: u64) -> u64 {
+        self.fetch_max(value, Ordering::AcqRel)
     }
 }
 
 #[cfg(feature = "std-atomics")]
 impl GaugeFn for std::sync::atomic::AtomicU64 {
-    fn increment(&self, value: f64) {
+    fn increment(&self, value: f64) -> f64 {
+        let mut input = 0f64;
         loop {
             let result = self.fetch_update(Ordering::AcqRel, Ordering::Relaxed, |curr| {
-                let input = f64::from_bits(curr);
+                input = f64::from_bits(curr);
                 let output = input + value;
                 Some(output.to_bits())
             });
@@ -213,12 +228,14 @@ impl GaugeFn for std::sync::atomic::AtomicU64 {
                 break;
             }
         }
+        input
     }
 
-    fn decrement(&self, value: f64) {
+    fn decrement(&self, value: f64) -> f64 {
+        let mut input = 0f64;
         loop {
             let result = self.fetch_update(Ordering::AcqRel, Ordering::Relaxed, |curr| {
-                let input = f64::from_bits(curr);
+                input = f64::from_bits(curr);
                 let output = input - value;
                 Some(output.to_bits())
             });
@@ -227,10 +244,11 @@ impl GaugeFn for std::sync::atomic::AtomicU64 {
                 break;
             }
         }
+        input
     }
 
-    fn set(&self, value: f64) {
-        let _ = self.swap(value.to_bits(), Ordering::AcqRel);
+    fn set(&self, value: f64) -> f64 {
+        f64::from_bits(self.swap(value.to_bits(), Ordering::AcqRel))
     }
 }
 
@@ -238,11 +256,11 @@ impl<T> CounterFn for Arc<T>
 where
     T: CounterFn,
 {
-    fn increment(&self, value: u64) {
+    fn increment(&self, value: u64) -> u64 {
         (**self).increment(value)
     }
 
-    fn absolute(&self, value: u64) {
+    fn absolute(&self, value: u64)-> u64 {
         (**self).absolute(value)
     }
 }
@@ -250,15 +268,15 @@ impl<T> GaugeFn for Arc<T>
 where
     T: GaugeFn,
 {
-    fn increment(&self, value: f64) {
+    fn increment(&self, value: f64) -> f64 {
         (**self).increment(value)
     }
 
-    fn decrement(&self, value: f64) {
+    fn decrement(&self, value: f64) -> f64 {
         (**self).decrement(value)
     }
 
-    fn set(&self, value: f64) {
+    fn set(&self, value: f64) -> f64 {
         (**self).set(value)
     }
 }
