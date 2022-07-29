@@ -11,7 +11,7 @@ pub trait Storage<K> {
     type Counter: CounterFn + Clone;
 
     /// The type used for gauges.
-    type Gauge: GaugeFn + Clone;
+    type Gauge: GaugeFn + Clone + CurrentValue;
 
     /// The type used for histograms.
     type Histogram: HistogramFn + Clone;
@@ -26,6 +26,9 @@ pub trait Storage<K> {
     fn histogram(&self, key: &K) -> Self::Histogram;
 }
 
+pub trait CurrentValue {
+    fn current_value(&self) -> f64;
+}
 /// Atomic metric storage.
 ///
 /// Utilizes atomics for storing the value(s) of a given metric.  Shared access to the actual atomic

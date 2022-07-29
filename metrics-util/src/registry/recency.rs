@@ -37,6 +37,8 @@ use crate::{
     registry::{AtomicStorage, Registry, Storage},
     MetricKind,
 };
+use crate::MetricKind::Gauge;
+use crate::registry::storage::CurrentValue;
 
 /// The generation of a metric.
 ///
@@ -309,6 +311,14 @@ where
         F: Fn(&Registry<K, S>, &K) -> bool,
         S: Storage<K>,
     {
+        if kind == Gauge {
+            let (hash, shard) = registry.get_hash_and_shard_for_gauge(key);
+            if let Some(value) = shard.read().raw_entry().from_key_hashed_nocheck(hash, key) {
+                if value.1.current_value() == 0 {
+                    return false;
+                }
+            }
+        }
         if let Some(idle_timeout) = self.idle_timeout {
             if self.mask.matches(kind) {
                 let mut guard = self.inner.lock();
